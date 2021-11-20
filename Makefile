@@ -1,22 +1,22 @@
-all: install
-
 install:
-	@poetry install
-
-package-install:
-	@pip install --user --index-url https://test.pypi.org/simple/ \
-	    --extra-index-url https://pypi.org/simple/ altvec-gendiff
+	poetry install
 
 lint:
-	@poetry run flake8 gendiff
+	poetry run flake8 gendiff
+
+selfcheck:
+	poetry check
+
+build:
+	poetry build
+
+gendiff:
+	poetry run gendiff
 
 test:
-	poetry run coverage run --source=gendiff -m pytest tests
+	poetry run pytest --junit-xml=./tests/coverage.xml
 
-cc-coverage:
+coverage:
 	poetry run coverage xml
 
-build: lint test
-	@poetry build
-
-.PHONY: all install package-install configure lint test build
+.PHONY: gendiff test

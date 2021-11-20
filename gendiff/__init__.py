@@ -1,5 +1,3 @@
-"""Gendiff project."""
+from gendiff.main import generate_diff
 
-from gendiff.generator import generate_diff
-
-__all__ = ('generate_diff',)  # noqa: WPS410
+__all__ = ('generate_diff')

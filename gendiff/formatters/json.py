@@ -1,8 +1,5 @@
-"""JSON render functions."""
-
 import json
 
 
-def render(ast):
-    """Render JSON."""
-    return json.dumps(ast, indent=2)
+def get_render_json(data):
+    return json.dumps(data, indent=2)

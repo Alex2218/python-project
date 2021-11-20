@@ -1,60 +1,63 @@
-"""Plain render functions."""
-
-from gendiff.constants import (
-    ADDED,
-    CHANGED,
-    COMPLEX,
-    NESTED,
-    REMOVED,
-    UNCHANGED,
-)
-
-ADDED_TMPL = "Property '{0}' was added with value: '{1}'"
-REMOVED_TMPL = "Property '{0}' was removed"
-CHANGED_TMPL = "Property '{0}' was changed. From '{1}' to '{2}'"
+from gendiff import tree_description as t
 
 
-def render(ast, parent=''):
-    """Render plain text."""
-    if not isinstance(ast, dict):
-        return str(ast)
-
-    result_array = []
-
-    for node_key, node_value in ast.items():
-        prop = get_property(parent, node_key)
-        node_type = node_value.get('type')
-
-        if node_type == ADDED:
-            entry = ADDED_TMPL.format(prop, get_value(node_value))
-        elif node_type == REMOVED:
-            entry = REMOVED_TMPL.format(prop)
-
-        if node_type == NESTED:
-            entry = render(node_value.get('value'), prop)
-        elif node_type == CHANGED:
-            entry = CHANGED_TMPL.format(
-                prop,
-                node_value.get('old_value'),
-                node_value.get('new_value'),
-            )
-        elif node_type == UNCHANGED:
-            continue
-
-        result_array.append(entry)
-    return '\n'.join(result_array)
+def build_path(parent):
+    return f'{parent}.' if parent != '' else ''
 
 
-def get_value(node):
-    """Return node value."""
-    node_value = node.get('value')
-    if isinstance(node_value, dict):
-        return COMPLEX
-    return str(node_value)
+def format_value(value):
+    """Handles side effects of json.load function"""
+    if value is None:
+        return 'null'
+    if type(value) is bool:
+        return 'true' if value else 'false'
+    if type(value) is str:
+        return f'\'{value}\''
+    if type(value) is dict \
+       or type(value) is list:
+        return '[complex value]'
+    else:
+        return value
 
 
-def get_property(parent, prop_name):
-    """Return property value."""
-    if not parent:
-        return prop_name
-    return '{parent}.{prop}'.format(parent=parent, prop=prop_name)
+def get_children(node, parent=""):
+
+    info_string = ""
+    if node[t.STATE] == t.CHILDREN:
+        list_diff = handle_children(node[t.VALUE],
+                                    f'{build_path(parent)}{node[t.KEY]}')
+        info_string += f"{list_diff}"
+    elif node[t.STATE] == t.ADDED:
+        info_string += f"\nProperty \'{build_path(parent)}{node[t.KEY]}\' " \
+                       f"was added with value: " \
+                       f"{format_value(node[t.VALUE])}"
+    elif node[t.STATE] == t.DELETED:
+        info_string += f"\nProperty \'{build_path(parent)}{node[t.KEY]}\' " \
+                       f"was removed"
+    elif node[t.STATE] == t.CHANGED:
+        info_string += f"\nProperty \'{parent}.{node[t.KEY]}\'" \
+                       f" was updated. " \
+                       f"From " \
+                       f"{format_value(node[t.VALUE_LEFT])}" \
+                       f" to " \
+                       f"{format_value(node[t.VALUE_RIGHT])}"
+
+    return info_string
+
+
+def handle_children(data, parent=""):
+
+    diff = ""
+    for element in data:
+        diff += f"{get_children(element, parent)}"
+
+    return diff
+
+
+def get_render_plain(data):
+    root_children = data.get('VALUE')
+
+    diff = handle_children(root_children)
+    diff = diff[1:]  # removes the first new string character
+
+    return diff
